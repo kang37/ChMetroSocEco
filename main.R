@@ -53,3 +53,10 @@ ma_ehi %>%
   theme_bw() + 
   labs(x = NULL, y = "Mean EHI")
 
+# 以南京都市圈为例，计算最大值、最小值、平均值、标准差。
+library(terra)
+nanjing_rast <- rast("data_raw/01nanjingMA_EHI_scaled01.tif")
+
+# 获取栅格数据的统计摘要
+summary(nanjing_rast)
+global(nanjing_rast, fun = "sd", na.rm = TRUE)
