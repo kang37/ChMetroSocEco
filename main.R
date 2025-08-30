@@ -10,7 +10,7 @@ get_ehi <- function(file_x) {
   # 从文件名中提取都市圈名称。
   ma_name <- gsub("MA_D_EHIstats.shp", "", file_x)
   # 获得目标数据。
-  my_dt <- st_read(paste0("data_raw/区县尺度/", file_x)) %>% 
+  my_dt <- st_read(paste0("data_raw/Boundaries/区县尺度/", file_x)) %>% 
     rename_with(~ tolower(.x))
   # Bug: 提醒谢命名应一致。
   if("name_1" %in% names(my_dt)) my_dt <- my_dt %>% rename("name" = "name_1")
