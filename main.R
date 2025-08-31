@@ -1,8 +1,8 @@
 # 加载包。
-pacman::p_load(dplyr, sf, ggplot2, forcats)
+pacman::p_load(dplyr, sf, ggplot2, forcats, terra, stringr)
 
 # 获取包含目标数据的文件的名称。
-ehi_files <- list.files("data_raw/区县尺度") %>% 
+ehi_files <- list.files("data_raw/Boundaries/区县尺度") %>% 
   grep("_EHIstats.shp", ., value = TRUE)
 
 # 函数：读取目标文件并获得所需数据，即各区县EHI平均值和中位数。
@@ -53,10 +53,50 @@ ma_ehi %>%
   theme_bw() + 
   labs(x = NULL, y = "Mean EHI")
 
-# 以南京都市圈为例，计算最大值、最小值、平均值、标准差。
-library(terra)
-nanjing_rast <- rast("data_raw/01nanjingMA_EHI_scaled01.tif")
 
-# 获取栅格数据的统计摘要
-summary(nanjing_rast)
-global(nanjing_rast, fun = "sd", na.rm = TRUE)
+# 各都市圈各指标热力图。
+# 获取目标tif文件名。
+tar_files <- 
+  lapply(
+    c("EO", "EI", "ER", "ESCI"),
+    function(x) {
+      list.files(paste0("data_raw/", x, "_compare"), full.names = TRUE) %>% 
+        grep("_scaled01.tif", ., value = TRUE) %>% 
+        .[!grepl(".ovr", .)]
+    }
+  ) %>% 
+  Reduce("c", .)
+
+# 读取文件并且
+get_tif_mean <- function(dir_x) {
+  rast_dt <- rast(dir_x)
+  res_mean <- global(rast_dt, fun = "mean", na.rm = TRUE)
+  return(res_mean)
+}
+
+ma_index <- 
+  # 计算各个tif平均值。
+  lapply(tar_files, get_tif_mean) %>% 
+  bind_rows() %>% 
+  # 获取指标名称和城市信息。
+  mutate(
+    ma = lapply(
+      tar_files, 
+      function(x) str_extract(x, "(\\d+)([A-Za-z]+)(?=MA)")
+    ) %>% 
+      Reduce("c", .), 
+    index = lapply(
+      tar_files, 
+      function(x) str_split(x, "/")[[1]][2] %>% gsub("_compare", "", .)
+    ) %>% 
+      Reduce("c", .), 
+    .before = 1
+  )
+
+# 作热力图。
+ggplot(ma_index) +
+  geom_tile(aes(index, fct_rev(ma), fill = mean)) + 
+  scale_fill_gradient(high = "red", low = "darkgreen") + 
+  theme_bw() + 
+  labs(x = "Index", y = NULL)
+
